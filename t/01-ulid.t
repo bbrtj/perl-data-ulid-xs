@@ -22,5 +22,9 @@ my $perl_regenerated = Data::ULID::ulid($generated);
 is substr($generated, 0, 8), substr($perl_generated, 0, 8), 'time part ok';
 is $generated, $perl_regenerated, 'perl regenerated ok';
 
+my $regenerated = ulid($perl_generated);
+
+is $perl_generated, $regenerated, 'xs regenerated ok';
+
 done_testing;
 
