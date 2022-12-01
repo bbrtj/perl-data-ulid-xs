@@ -5,41 +5,41 @@
 #include "ppport.h"
 
 // 0123456789ABCDEFGHJKMNPQRSTVWXYZ
-char get_base32_char(int num)
+inline char get_base32_char(int num)
 {
 	switch (num) {
-		case 0: return '0'; break;
-		case 1: return '1'; break;
-		case 2: return '2'; break;
-		case 3: return '3'; break;
-		case 4: return '4'; break;
-		case 5: return '5'; break;
-		case 6: return '6'; break;
-		case 7: return '7'; break;
-		case 8: return '8'; break;
-		case 9: return '9'; break;
-		case 10: return 'A'; break;
-		case 11: return 'B'; break;
-		case 12: return 'C'; break;
-		case 13: return 'D'; break;
-		case 14: return 'E'; break;
-		case 15: return 'F'; break;
-		case 16: return 'G'; break;
-		case 17: return 'H'; break;
-		case 18: return 'J'; break;
-		case 19: return 'K'; break;
-		case 20: return 'M'; break;
-		case 21: return 'N'; break;
-		case 22: return 'P'; break;
-		case 23: return 'Q'; break;
-		case 24: return 'R'; break;
-		case 25: return 'S'; break;
-		case 26: return 'T'; break;
-		case 27: return 'V'; break;
-		case 28: return 'W'; break;
-		case 29: return 'X'; break;
-		case 30: return 'Y'; break;
-		case 31: return 'Z'; break;
+		case 0: return '0';
+		case 1: return '1';
+		case 2: return '2';
+		case 3: return '3';
+		case 4: return '4';
+		case 5: return '5';
+		case 6: return '6';
+		case 7: return '7';
+		case 8: return '8';
+		case 9: return '9';
+		case 10: return 'A';
+		case 11: return 'B';
+		case 12: return 'C';
+		case 13: return 'D';
+		case 14: return 'E';
+		case 15: return 'F';
+		case 16: return 'G';
+		case 17: return 'H';
+		case 18: return 'J';
+		case 19: return 'K';
+		case 20: return 'M';
+		case 21: return 'N';
+		case 22: return 'P';
+		case 23: return 'Q';
+		case 24: return 'R';
+		case 25: return 'S';
+		case 26: return 'T';
+		case 27: return 'V';
+		case 28: return 'W';
+		case 29: return 'X';
+		case 30: return 'Y';
+		case 31: return 'Z';
 		default:
 			croak("something went wrong during encoding (tried to encode %d)", num);
 	}
@@ -66,7 +66,7 @@ int char_to_num(char c, int pos)
 			croak("invalid padding in char_to_num: %d", pos);
 	}
 
-	int num = c & mask;
+	unsigned num = c & mask;
 	if (pos < 3) {
 		return num >> (3 - pos);
 	}
@@ -75,38 +75,82 @@ int char_to_num(char c, int pos)
 	}
 }
 
-SV* encode_base32(SV *svstr)
+#define ULID_LEN 16
+#define ULID_TIME_LEN 6
+#define ULID_RAND_LEN 10
+#define RESULT_LEN 26
+
+SV* encode_ulid(SV *svstr)
 {
-	char* str = SvPVbyte_nolen(svstr);
+	unsigned long len;
+	char* str = SvPVbyte(svstr, len);
+	if (len != ULID_LEN) croak("invalid string length in encode_ulid: %d", len);
 
-	size_t len = strlen(str);
-	int pad = (len * 8) % 5;
-	size_t result_len = len * 8 / 5 + (pad > 0);
-
-	char *result = malloc(result_len * sizeof *result + 1);
-	result[result_len] = '\0';
+	char result[] = "???????????????????????????";
 	char *current = result;
 
-	int last_pos = -1 * (5 - pad) % 5;
-	int i;
-	int num = 0;
+	int i = 0;
+	unsigned num = 0;
+	int last_pos;
+	int last_len = 0;
 
-	for (i = 0; i < len; ++i) {
-		while (last_pos < 8) {
-			num += char_to_num(str[i], last_pos);
-			last_pos += 5;
+	int parts[2] = { ULID_TIME_LEN, ULID_RAND_LEN };
+	int paddings[2] = { -2, 0 };
+	int part;
 
-			if (last_pos <= 8) {
-				*current = get_base32_char(num);
-				++current;
-				num = 0;
+	for (part = 0; part < 2; ++part) {
+		last_pos = paddings[part];
+		len = last_len + parts[part];
+
+		for (; i < len; ++i) {
+			while (last_pos < 8) {
+				num += char_to_num(str[i], last_pos);
+				last_pos += 5;
+
+				if (last_pos <= 8) {
+					*current++ = get_base32_char(num);
+					num = 0;
+				}
 			}
+
+			last_pos = (last_pos > 8) * (last_pos - 8 - 5);
 		}
 
-		last_pos = (last_pos > 8) * (last_pos - 8 - 5);
+		last_len = len;
 	}
 
-	SV *svresult = newSVpv(result, result_len);
+	SV *svresult = newSVpv(result, RESULT_LEN);
+	return svresult;
+}
+
+SV* build_binary_ulid (double time, const char *randomness, unsigned long len)
+{
+	char result[ULID_LEN];
+	int i;
+
+	unsigned long microtime = time * 1000;
+	unsigned char byte;
+
+	// network byte order
+	for (i = ULID_TIME_LEN - 1; i >= 0; --i) {
+		byte = microtime & 0xff;
+		result[i] = (char) byte;
+		microtime = microtime >> 8;
+	}
+
+	int j = 0;
+
+	for (i = ULID_TIME_LEN; i < ULID_LEN; ++i) {
+		if (len < ULID_RAND_LEN) {
+			result[i] = '\0';
+			++len;
+		}
+		else {
+			result[i] = randomness[j++];
+		}
+	}
+
+	SV *svresult = newSVpv(result, ULID_LEN);
 	return svresult;
 }
 
@@ -124,7 +168,7 @@ ulid(...)
 		PUSHMARK(SP);
 
 		if (items == 0) {
-			int count = call_pv("Data::ULID::binary_ulid", G_SCALAR);
+			int count = call_pv("Data::ULID::XS::binary_ulid", G_SCALAR);
 
 			SPAGAIN;
 
@@ -133,9 +177,7 @@ ulid(...)
 			}
 
 			SV *ret = POPs;
-			SV *encoded = encode_base32(ret);
-			SvREFCNT_inc(encoded);
-			RETVAL = encoded;
+			RETVAL = encode_ulid(ret);
 		}
 		else {
 			EXTEND(SP, 1);
@@ -159,8 +201,6 @@ ulid(...)
 	OUTPUT:
 		RETVAL
 
-#ifdef NOT_IMPLEMENTED
-
 SV*
 binary_ulid(...)
 	CODE:
@@ -169,20 +209,41 @@ binary_ulid(...)
 		PUSHMARK(SP);
 
 		if (items == 0) {
-			EXTEND(SP, 1);
-			PUSHs(ST(0));
-			PUTBACK;
+			ENTER;
+			SAVETMPS;
 
-			int count = call_pv("Data::ULID::binary_ulid", G_SCALAR);
+			int count = call_pv("Time::HiRes::time", G_SCALAR);
 
 			SPAGAIN;
 
 			if (count != 1) {
-				croak("Calling Data::ULID::binary_ulid went wrong in Data::ULID::XS::binary_ulid");
+				croak("Calling Time::HiRes::time went wrong in Data::ULID::XS::binary_ulid");
 			}
 
-			SV *bytes = POPs;
-			RETVAL = newSVpv("aoeui", 4);
+			SV *time_sv = POPs;
+			double time = SvNV(time_sv);
+
+			EXTEND(SP, 2);
+			PUSHs(get_sv("Data::ULID::XS::RNG", 0));
+			PUSHs(sv_2mortal(newSViv(10)));
+			PUTBACK;
+
+			count = call_method("bytes", G_SCALAR);
+
+			SPAGAIN;
+
+			if (count != 1) {
+				croak("Calling method bytes on Crypt::PRNG::Sober128 went wrong in Data::ULID::XS::binary_ulid");
+			}
+
+			SV *randomness_sv = POPs;
+			unsigned long len;
+			char *randomness = SvPVbyte(randomness_sv, len);
+
+			FREETMPS;
+			LEAVE;
+
+			RETVAL = build_binary_ulid(time, randomness, len);
 		}
 		else {
 			EXTEND(SP, 1);
@@ -205,6 +266,4 @@ binary_ulid(...)
 		PUTBACK;
 	OUTPUT:
 		RETVAL
-
-#endif
 
