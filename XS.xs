@@ -5,7 +5,7 @@
 #include "ppport.h"
 
 // 0123456789ABCDEFGHJKMNPQRSTVWXYZ
-inline char get_base32_char(int num)
+char get_base32_char(unsigned num)
 {
 	switch (num) {
 		case 0: return '0';
@@ -86,7 +86,7 @@ SV* encode_ulid(SV *svstr)
 	char* str = SvPVbyte(svstr, len);
 	if (len != ULID_LEN) croak("invalid string length in encode_ulid: %d", len);
 
-	char result[] = "???????????????????????????";
+	char result[RESULT_LEN];
 	char *current = result;
 
 	int i = 0;
@@ -119,8 +119,7 @@ SV* encode_ulid(SV *svstr)
 		last_len = len;
 	}
 
-	SV *svresult = newSVpv(result, RESULT_LEN);
-	return svresult;
+	return newSVpv(result, RESULT_LEN);
 }
 
 SV* build_binary_ulid (double time, const char *randomness, unsigned long len)
@@ -150,8 +149,7 @@ SV* build_binary_ulid (double time, const char *randomness, unsigned long len)
 		}
 	}
 
-	SV *svresult = newSVpv(result, ULID_LEN);
-	return svresult;
+	return newSVpv(result, ULID_LEN);
 }
 
 // proper XS Code starts here
@@ -233,7 +231,7 @@ binary_ulid(...)
 			SPAGAIN;
 
 			if (count != 1) {
-				croak("Calling method bytes on Crypt::PRNG::Sober128 went wrong in Data::ULID::XS::binary_ulid");
+				croak("Calling method bytes on Crypt::PRNG::* went wrong in Data::ULID::XS::binary_ulid");
 			}
 
 			SV *randomness_sv = POPs;
