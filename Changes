@@ -1,5 +1,9 @@
 Revision history for Perl extension Data::ULID::XS.
 
+0.002 Thu Dec 1 2022
+	- implement binary_ulid
+	- fix bugs and memory leaks in ulid
+
 0.001 Thu Dec 1 2022
 	- first version
 
