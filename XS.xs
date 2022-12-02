@@ -4,69 +4,11 @@
 
 #include "ppport.h"
 
-// 0123456789ABCDEFGHJKMNPQRSTVWXYZ
-char get_base32_char(unsigned num)
-{
-	switch (num) {
-		case 0: return '0';
-		case 1: return '1';
-		case 2: return '2';
-		case 3: return '3';
-		case 4: return '4';
-		case 5: return '5';
-		case 6: return '6';
-		case 7: return '7';
-		case 8: return '8';
-		case 9: return '9';
-		case 10: return 'A';
-		case 11: return 'B';
-		case 12: return 'C';
-		case 13: return 'D';
-		case 14: return 'E';
-		case 15: return 'F';
-		case 16: return 'G';
-		case 17: return 'H';
-		case 18: return 'J';
-		case 19: return 'K';
-		case 20: return 'M';
-		case 21: return 'N';
-		case 22: return 'P';
-		case 23: return 'Q';
-		case 24: return 'R';
-		case 25: return 'S';
-		case 26: return 'T';
-		case 27: return 'V';
-		case 28: return 'W';
-		case 29: return 'X';
-		case 30: return 'Y';
-		case 31: return 'Z';
-		default:
-			croak("something went wrong during encoding (tried to encode %d)", num);
-	}
-}
-
 int char_to_num(char c, int pos)
 {
-	int mask;
+	int masks[] = {0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0x7c, 0x3e, 0x1f, 0x0f, 0x07, 0x03, 0x01};
+	unsigned num = c & masks[pos + 4];
 
-	switch (pos) {
-		case -4: mask = 0x80; break;
-		case -3: mask = 0xc0; break;
-		case -2: mask = 0xe0; break;
-		case -1: mask = 0xf0; break;
-		case 0: mask = 0xf8; break;
-		case 1: mask = 0x7c; break;
-		case 2: mask = 0x3e; break;
-		case 3: mask = 0x1f; break;
-		case 4: mask = 0x0f; break;
-		case 5: mask = 0x07; break;
-		case 6: mask = 0x03; break;
-		case 7: mask = 0x01; break;
-		default:
-			croak("invalid padding in char_to_num: %d", pos);
-	}
-
-	unsigned num = c & mask;
 	if (pos < 3) {
 		return num >> (3 - pos);
 	}
@@ -86,6 +28,7 @@ SV* encode_ulid(SV *svstr)
 	char* str = SvPVbyte(svstr, len);
 	if (len != ULID_LEN) croak("invalid string length in encode_ulid: %d", len);
 
+	char base32[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 	char result[RESULT_LEN];
 	char *current = result;
 
@@ -108,7 +51,7 @@ SV* encode_ulid(SV *svstr)
 				last_pos += 5;
 
 				if (last_pos <= 8) {
-					*current++ = get_base32_char(num);
+					*current++ = base32[num];
 					num = 0;
 				}
 			}
