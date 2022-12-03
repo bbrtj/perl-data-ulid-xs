@@ -7,13 +7,13 @@ use Exporter qw(import);
 use Data::ULID qw(:all);
 
 use Time::HiRes qw();
-use Crypt::PRNG::Sober128 qw();
+use Crypt::PRNG qw();
 
 our @EXPORT = @Data::ULID::EXPORT;
 our @EXPORT_OK = @Data::ULID::EXPORT_OK;
 our %EXPORT_TAGS = %Data::ULID::EXPORT_TAGS;
 
-our $RNG = Crypt::PRNG::Sober128->new;
+our $RNG = Crypt::PRNG->new('Sober128');
 
 require XSLoader;
 XSLoader::load('Data::ULID::XS', $Data::ULID::XS::VERSION);
