@@ -9,10 +9,10 @@
 #define ULID_RAND_LEN 10
 #define RESULT_LEN 26
 
-SV* encode_ulid(SV *svstr)
+SV* encode_ulid(SV *strsv)
 {
 	unsigned long len;
-	char* str = SvPVbyte(svstr, len);
+	char *str = SvPVbyte(strsv, len);
 	if (len != ULID_LEN) croak("invalid string length in encode_ulid: %d", len);
 
 	char base32[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -28,31 +28,25 @@ SV* encode_ulid(SV *svstr)
 	return newSVpv(result, RESULT_LEN);
 }
 
-SV* build_binary_ulid (double time, const char *randomness, unsigned long len)
+SV* build_binary_ulid (double time, SV *randomnesssv)
 {
-	char result[ULID_LEN];
-	int i;
+	unsigned long len;
+	char *randomness = SvPVbyte(randomnesssv, len);
+	if (len == 0) croak("no randomness was fetched for build_binary_ulid");
+
+	char result[ULID_LEN] = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+	int i, j;
 
 	unsigned long microtime = time * 1000;
-	unsigned char byte;
 
 	// network byte order
 	for (i = ULID_TIME_LEN - 1; i >= 0; --i) {
-		byte = microtime & 0xff;
-		result[i] = (char) byte;
+		result[i] = (char) (microtime & 0xff);
 		microtime = microtime >> 8;
 	}
 
-	int j = 0;
-
-	for (i = ULID_TIME_LEN; i < ULID_LEN; ++i) {
-		if (len < ULID_RAND_LEN) {
-			result[i] = '\0';
-			++len;
-		}
-		else {
-			result[i] = randomness[j++];
-		}
+	for (i = ULID_LEN - len, j = 0; i < ULID_LEN; ++i) {
+		result[i] = randomness[j++];
 	}
 
 	return newSVpv(result, ULID_LEN);
@@ -80,8 +74,7 @@ ulid(...)
 				croak("Calling Data::ULID::XS::binary_ulid went wrong in Data::ULID::XS::ulid");
 			}
 
-			SV *ret = POPs;
-			RETVAL = encode_ulid(ret);
+			RETVAL = encode_ulid(POPs);
 		}
 		else {
 			EXTEND(SP, 1);
@@ -113,26 +106,15 @@ binary_ulid(...)
 		PUSHMARK(SP);
 
 		if (items == 0) {
-			ENTER;
-			SAVETMPS;
-
-			int count = call_pv("Time::HiRes::time", G_SCALAR);
-
-			SPAGAIN;
-
-			if (count != 1) {
-				croak("Calling Time::HiRes::time went wrong in Data::ULID::XS::binary_ulid");
-			}
-
-			SV *time_sv = POPs;
-			double time = SvNV(time_sv);
+			SV *tmp = newSViv(10);
 
 			EXTEND(SP, 2);
 			PUSHs(get_sv("Data::ULID::XS::RNG", 0));
-			PUSHs(sv_2mortal(newSViv(10)));
+			PUSHs(tmp);
 			PUTBACK;
 
-			count = call_method("bytes", G_SCALAR);
+			int count = call_method("bytes", G_SCALAR);
+			SvREFCNT_dec(tmp);
 
 			SPAGAIN;
 
@@ -140,14 +122,11 @@ binary_ulid(...)
 				croak("Calling method bytes on Crypt::PRNG::* went wrong in Data::ULID::XS::binary_ulid");
 			}
 
-			SV *randomness_sv = POPs;
-			unsigned long len;
-			char *randomness = SvPVbyte(randomness_sv, len);
+			SV **svp = hv_fetchs(PL_modglobal, "Time::NVtime", 0);
+			if (!SvIOK(*svp)) croak("Time::NVtime isn't a function pointer");
+			NV (*nvtime)() = INT2PTR(NV(*)(), SvIV(*svp));
 
-			FREETMPS;
-			LEAVE;
-
-			RETVAL = build_binary_ulid(time, randomness, len);
+			RETVAL = build_binary_ulid((*nvtime)(), POPs);
 		}
 		else {
 			EXTEND(SP, 1);
