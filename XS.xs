@@ -37,7 +37,7 @@ SV* build_binary_ulid (double time, SV *randomnesssv)
 	char result[ULID_LEN] = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 	int i, j;
 
-	unsigned long microtime = time * 1000;
+	unsigned long long microtime = time * 1000;
 
 	// network byte order
 	for (i = ULID_TIME_LEN - 1; i >= 0; --i) {
