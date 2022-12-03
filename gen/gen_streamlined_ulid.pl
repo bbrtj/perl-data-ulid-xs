@@ -64,13 +64,13 @@ sub generate
 
 sub get_base32_encoding
 {
-	my sub get_shift {
+	my $get_shift = sub {
 		my ($by) = @_;
 
 		return ">>$by" if $by > 0;
 		return '<<' . (-1 * $by) if $by < 0;
 		return '';
-	}
+	};
 
 	my @lines;
 
@@ -103,7 +103,7 @@ sub get_base32_encoding
 		for (1 .. $total) {
 			my ($mask, $shift) = @{$masks{$offset}};
 
-			my $manip = sprintf $bit_manip_proto, $byte_char, $mask, get_shift($shift);
+			my $manip = sprintf $bit_manip_proto, $byte_char, $mask, $get_shift->($shift);
 
 			$byte_char += 1
 				if $shift <= 0;
@@ -113,7 +113,7 @@ sub get_base32_encoding
 				my ($nmask, $nshift) = @{$masks{$offset}};
 				$manip = sprintf "%s + %s",
 					$manip,
-					sprintf($bit_manip_proto, $byte_char, $nmask, get_shift($nshift))
+					sprintf($bit_manip_proto, $byte_char, $nmask, $get_shift->($nshift))
 				;
 			}
 
