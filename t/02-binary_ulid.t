@@ -10,7 +10,7 @@ use Data::ULID qw();
 isnt \&binary_ulid, \&Data::ULID::binary_ulid, 'not the same binary_ulid function ok';
 
 # generating randomness - test a couple of times to make sure corner case random values are covered
-for (1 .. 50) {
+for (1 .. 20) {
 	my $generated = binary_ulid;
 
 	is length $generated, 16, 'length ok';
