@@ -21,8 +21,9 @@ for (1 .. 20) {
 	my $perl_generated = Data::ULID::binary_ulid;
 	my $perl_regenerated = Data::ULID::binary_ulid($generated);
 
-	# time part is 6 bytes, but it represents microtime, so lets just test first 5
-	is substr($generated, 0, 5), substr($perl_generated, 0, 5), 'time part ok';
+	# time part is 6 bytes, but it represents microtime, so lets just test first 4
+	# this gives us 16 bit window in which the tests will pass - 65 seconds
+	is substr($generated, 0, 4), substr($perl_generated, 0, 4), 'time part ok';
 	is $generated, $perl_regenerated, 'perl regenerated ok';
 
 	my $regenerated = binary_ulid($perl_generated);
