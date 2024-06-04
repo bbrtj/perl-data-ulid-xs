@@ -42,6 +42,12 @@ XS speedups.
 Same as L<Data::ULID>. All functions should work exactly the same, but C<ulid>
 and C<binary_ulid> called with no arguments are reimplemented in XS.
 
+=head1 RNG backend
+
+The module uses L<CryptX> to quickly generate secure randomness. The default
+algorithm used is C<Sober128>. You can change that by replacing the
+C<$Data::ULID::XS::RNG> variable with a different L<Crypt::PRNG> object.
+
 =head1 BENCHMARK
 
 Comparing speeds of Perl and XS implementations:
