@@ -37,10 +37,6 @@ This module replaces some parts of L<Data::ULID> that are performance-critical
 with XS counterparts. Its interface is the same as Data::ULID, but you get free
 XS speedups.
 
-B<Beta quality>: while this module works well in general cases, it may also
-contain errors common to C code like memory leaks or access violations. Please
-do report if you encounter any problems.
-
 =head1 FUNCTIONS
 
 Same as L<Data::ULID>. All functions should work exactly the same, but C<ulid>
