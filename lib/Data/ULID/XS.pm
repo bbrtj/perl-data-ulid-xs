@@ -50,15 +50,15 @@ C<$Data::ULID::XS::RNG> variable with a different L<Crypt::PRNG> object.
 
 =head1 BENCHMARK
 
-Comparing speeds of Perl and XS implementations:
+Comparing ULID generation speeds of Perl and XS implementations:
 
 	                                 Rate Data::ULID::ulid Data::ULID::binary_ulid Data::ULID::XS::ulid Data::ULID::XS::binary_ulid
-	Data::ULID::ulid              97342/s               --                    -68%                 -88%                        -91%
-	Data::ULID::binary_ulid      301501/s             210%                      --                 -62%                        -71%
-	Data::ULID::XS::ulid         793885/s             716%                    163%                   --                        -24%
-	Data::ULID::XS::binary_ulid 1043509/s             972%                    246%                  31%                          --
+	Data::ULID::ulid              85339/s               --                    -39%                 -91%                        -93%
+	Data::ULID::binary_ulid      140302/s              64%                      --                 -85%                        -89%
+	Data::ULID::XS::ulid         944258/s            1006%                    573%                   --                        -26%
+	Data::ULID::XS::binary_ulid 1273091/s            1392%                    807%                  35%                          --
 
-Benchmark ran on Thinkpad T480 (i7-8650U) and FreeBSD 12.3.
+Benchmark ran on Thinkpad T480 (i7-8650U) and FreeBSD 14.0.
 
 =head1 SEE ALSO
 
